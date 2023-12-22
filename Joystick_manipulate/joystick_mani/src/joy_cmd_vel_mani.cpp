@@ -45,12 +45,12 @@ moter calculate_angle(float x, float y, float z,int l1, int l2){
 
   //세타2 구하기
 
-  theta2=atan2(ex,ey)-atan2(l1+(l2*cos3),(l2*sin3));
+  theta2=atan2(ey,ex)-atan2(l1+(l2*cos3),(l2*sin3));
 
-  theta1 = atan2(y,x);
+  theta1 = atan2(x,y);
 
-  dmxel.mo1=val2dy(theta1);
-  dmxel.mo2=val2dy(theta2);
+  dmxel.mo1=val2dy(theta1)+252;
+  dmxel.mo2=val2dy(theta2)+400;
   dmxel.mo3=val2dy(theta3);
   dmxel.mo4=val2dy(theta2+theta3-1.5708);
   dmxel.theta=theta2+theta3;
@@ -119,7 +119,7 @@ void Joy_cmd_vel_mani::operate()
   //최대길이 체크
   float checkbuf= sqrt((crt_arm_x*crt_arm_x)+(crt_arm_y*crt_arm_y)+(crt_arm_z*crt_arm_z));
   bool check;
-  if(checkbuf<48){
+  if(checkbuf<40){
     check=true;
   }
   else check=false;
@@ -138,9 +138,9 @@ if(check==true){
   crt_grip=((grip_open-1)/2)*230+((1-grip_close)/2)*230; //조이에서 받는값이 좀 달라서 이 그리퍼움직이는 둘은
 
   //최대값 제한
-  crt_arm_z=MAXtoMIN(crt_arm_z,10);
-  crt_arm_x=MAXtoMIN(crt_arm_x,10);
-  crt_arm_y=MAXtoMIN(crt_arm_y,10);
+  crt_arm_z=MAXtoMIN(crt_arm_z,50);
+  crt_arm_x=MAXtoMIN(crt_arm_x,50);
+  crt_arm_y=MAXtoMIN(crt_arm_y,50);
   crt_hand =MAXtoMIN(crt_hand,180); 
   crt_grip =MAXtoMIN(crt_grip,230);
 }
@@ -171,12 +171,18 @@ if(init_grip==1||crt_init_grip==1){
 if(init_ride==1||crt_init_ride==1){
       crt_init_ride=1;
       crt_init_grip=0; 
-      crt_arm_x=2;
-      crt_arm_y=1;
-      crt_arm_z=0;
+      crt_arm_x=0;
+      crt_arm_y=3;
+      crt_arm_z=3;
   }
 
 if(dmx.mo2<=2000){dmx.mo2=2000;}
+if(dmx.mo3<=300){dmx.mo2=300;}
+if(dmx.mo4<=200){dmx.mo2=200;}
+
+if(dmx.mo2>=3900){dmx.mo2=3900;}
+if(dmx.mo3>=3900){dmx.mo2=3900;}
+if(dmx.mo4>=3900){dmx.mo2=3900;}
 
 msg.motor1=dmx.mo1;
 msg.motor2=dmx.mo2;
@@ -202,8 +208,8 @@ void Joy_cmd_vel_mani::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 
   /*float형식*/
 
-  arm_y= joy->axes[0]; //조이스틱에서 왼쪽 방향키 왼쪽 오른쪽
-  arm_x = joy->axes[1]; //조이스틱에서 왼쪽 방향키 
+  arm_x= joy->axes[0]; //조이스틱에서 왼쪽 방향키 왼쪽 오른쪽
+  arm_y= joy->axes[1]; //조이스틱에서 왼쪽 방향키 
   grip_close =joy->axes[2]; //조이스틱에서 L2
   hand= joy->axes[3];  //조이스틱에서 오른쪽 방향키 왼쪽 오른쪽
   arm_z = joy->axes[4];  //조이스틱에서 오른쪽 방향키 위아래
