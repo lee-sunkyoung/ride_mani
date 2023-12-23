@@ -17,9 +17,10 @@ private:
 public:
   RIDE();
   ~RIDE();
-  LR distin(cv::Mat color_img);
+  LR max_distin(cv::Mat color_img);
+  LR min_distin(cv::Mat color_img);
   XY riding(cv::Mat yello, cv::Mat white, cv::Mat red);
-  XY judge(LR a, LR b);
+  XY judge(LR L, LR R);
   XY wheel(int LRPM, int RRPM);
   char grad(LR gradient);
 };
@@ -29,9 +30,9 @@ XY RIDE::riding(cv::Mat yello, cv::Mat white, cv::Mat red){
 
 LR L,R,STOP;
 
-L=distin(yello);
-R=distin(white);
-STOP=distin(red);  //왼쪽오른쪽 123 좌표 저장하기
+L=max_distin(yello);
+R=min_distin(white);
+STOP=max_distin(red);  //왼쪽오른쪽 123 좌표 저장하기
 
 XY sol;
 
@@ -40,41 +41,38 @@ sol= judge(L,R);
 return sol;
 }
 
-XY RIDE::judge(LR a, LR b){
+XY RIDE::judge(LR L, LR R){
 
-XY yello,white,result;
+XY result;
 
-char yello_grad= grad(a);
-char white_grad= grad(b);
+if(R.p2.x==0&&L.p2.x>0){result=wheel(15,10);} //하양중간안잡히면 우회전
+else if(L.p2.x==0&&R.p2.x>0){result=wheel(10,15);} //노랑중간안잡히고 하양중간잡힘
+else {result=wheel(15,15);}//아니면 직진
 
 //곡선우선, 직선은 둘다 직선잡히면 직선임.
-
-if(yello_grad=='b'){result= wheel(12,14);}
-else if(yello_grad=='d'){result= wheel(14,12);}
-
 return result;
 }
 
-char RIDE::grad(LR gradient){
+char RIDE::grad(LR gradient){       //기울기 구하려고만든함수...였으나 이제안쓸거같은..고런느낌쓰
     char gradi;
     XY p;
 
     LR g = gradient;
-    
+
     p.x=0;p.y=0;
 
-    if(g.p1.x!=0&&g.p2.x!=0){    
+    if(g.p1.x!=0&&g.p2.x!=0){
         if(g.p1.x<g.p2.x){p.x=-1;}
         else if(g.p1.x==g.p2.x){p.x=10;}
         else if(g.p1.x>g.p2.x){p.x=1;}
     }
-    
+
     if(g.p2.x!=0&&g.p3.x!=0){
         if(g.p2.x<g.p3.x){p.y=-1;}
         else if(g.p2.x==g.p3.x){p.y=10;}
         else if(g.p2.x>g.p3.x){p.y=1;}
     }
-    
+
     if(g.p1.x!=0&&g.p2.x==0&&g.p3.x!=0){     //p2만 안잡힘
             if(g.p1.x<240&&g.p3.x<240){gradi='d';}
             else if(g.p1.x>240&&g.p3.x>240){gradi='b';}
@@ -91,14 +89,49 @@ char RIDE::grad(LR gradient){
     return gradi;
 }
 
-LR RIDE::distin(cv::Mat color_img){
+LR RIDE::max_distin(cv::Mat color_img){
      std::vector<cv::Point> Wpoints;
       cv::findNonZero(color_img, Wpoints);
-      int targety1 = 85;
-      cv::Point minPoint1;  
+      int targety1 = 75;
+      cv::Point maxPoint1;
       int targety2 = 135;
-      cv::Point minPoint2;  
-      int targety3 = 185;
+      cv::Point maxPoint2;
+      int targety3 = 195;
+      cv::Point maxPoint3;
+      for (std::vector<cv::Point>::const_iterator it = Wpoints.begin(); it != Wpoints.end(); ++it) {
+       const cv::Point& point = *it;
+        if (point.y == targety1) {
+            if (maxPoint1.x == 0 || point.x > maxPoint1.x) {
+                maxPoint1 = point;
+            }
+        }
+        else if(point.y==targety2){
+           if (maxPoint2.x == 0 || point.x > maxPoint2.x) {
+                maxPoint2 = point;
+            }
+        }
+        else if(point.y==targety3){
+            if (maxPoint3.x == 0 || point.x > maxPoint3.x) {
+                maxPoint3 = point;
+            }
+        }
+      }
+    LR P;
+    P.p1.x=maxPoint1.x;
+    P.p2.x=maxPoint2.x;
+    P.p3.x=maxPoint3.x;
+
+    return P;
+    }
+
+LR RIDE::min_distin(cv::Mat color_img){
+     std::vector<cv::Point> Wpoints;
+      cv::findNonZero(color_img, Wpoints);
+      int targety1 = 75;
+      cv::Point minPoint1;
+      int targety2 = 135;
+      cv::Point minPoint2;
+      int targety3 = 195;
       cv::Point minPoint3;
       for (std::vector<cv::Point>::const_iterator it = Wpoints.begin(); it != Wpoints.end(); ++it) {
        const cv::Point& point = *it;
@@ -113,7 +146,7 @@ LR RIDE::distin(cv::Mat color_img){
             }
         }
         else if(point.y==targety3){
-            if (minPoint3.x == 0 || point.x < minPoint3.x) {            
+            if (minPoint3.x == 0 || point.x < minPoint3.x) {
                 minPoint3 = point;
             }
         }
@@ -122,9 +155,10 @@ LR RIDE::distin(cv::Mat color_img){
     P.p1.x=minPoint1.x;
     P.p2.x=minPoint2.x;
     P.p3.x=minPoint3.x;
-    
+
     return P;
     }
+
 
 XY RIDE::wheel(int LRPM,int RRPM){
         XY a;
