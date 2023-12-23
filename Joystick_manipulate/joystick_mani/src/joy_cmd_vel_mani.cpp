@@ -1,3 +1,4 @@
+
 #include <ros/ros.h>
 #include<std_msgs/Int64.h>
 #include <geometry_msgs/Twist.h>
@@ -50,7 +51,7 @@ moter calculate_angle(float x, float y, float z,int l1, int l2){
   theta1 = atan2(x,y);
 
   dmxel.mo1=val2dy(theta1)+252;
-  dmxel.mo2=val2dy(theta2)+400;
+  dmxel.mo2=val2dy(theta2);
   dmxel.mo3=val2dy(theta3);
   dmxel.mo4=val2dy(theta2+theta3-1.5708);
   dmxel.theta=theta2+theta3;
@@ -173,7 +174,7 @@ if(init_ride==1||crt_init_ride==1){
       crt_init_grip=0; 
       crt_arm_x=0;
       crt_arm_y=3;
-      crt_arm_z=3;
+      crt_arm_z=10;
   }
 
 if(dmx.mo2<=2000){dmx.mo2=2000;}

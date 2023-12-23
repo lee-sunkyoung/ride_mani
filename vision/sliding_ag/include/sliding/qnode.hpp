@@ -27,6 +27,7 @@
 #include <QString>
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/Twist.h>
+#include <std_msgs/Bool.h>
 //#include <tutorial_msgs/mydmxel.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
@@ -54,6 +55,21 @@ public:
   cv::Mat *imgRaw = NULL;
   bool isreceived = false;
 
+  image_transport::Subscriber subImage;
+  //ros::Subscriber subJoy;
+  
+  std_msgs::Bool boolval;
+  geometry_msgs::Twist twist;
+
+  ros::Publisher init_pub;
+  ros::Publisher pantilt_pub;
+  ros::Publisher cmd_vel_pub;
+  ros::Publisher wheel_pub;
+  
+  void callbackImage(const sensor_msgs::ImageConstPtr& msg_img);
+  //void callbackJoy(const tutorial_msgs::mydmxelConstPtr& msg);
+
+
 Q_SIGNALS:
   void rosShutdown();
 
@@ -62,18 +78,6 @@ Q_SIGNALS:
 private:
   int init_argc;
   char** init_argv;
-
-  image_transport::Subscriber subImage;
-  //ros::Subscriber subJoy;
-  
-  geometry_msgs::Twist twist;
-  ros::Publisher init_pub;
-  ros::Publisher pantilt_pub;
-  ros::Publisher cmd_vel_pub;
-  ros::Publisher wheel_pub;
-  
-  void callbackImage(const sensor_msgs::ImageConstPtr& msg_img);
-  //void callbackJoy(const tutorial_msgs::mydmxelConstPtr& msg);
 
 };
 

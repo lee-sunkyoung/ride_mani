@@ -32,7 +32,6 @@ namespace sliding
  * @brief Qt central, all operations relating to the view part here.
  */
 
-
 class MainWindow : public QMainWindow
 {
   Q_OBJECT
@@ -41,7 +40,7 @@ public:
   MainWindow(int argc, char** argv, QWidget* parent = 0);
   ~MainWindow();
 
-  int abcde=1234;
+  int abcde = 1234;
 
   int IMAGE_WIDTH = 480;
   int IMAGE_HEIGHT = 270;
@@ -73,11 +72,12 @@ public:
   void drawline(cv::Mat& Image);
 
   cv::Mat cutImages(cv::Mat& cloneImage);
+  void labeling(cv::Mat& image, cv::Mat& image2);
   void findAndDrawContours(cv::Mat& closed, cv::Mat& image);
-  void trimAndSaveImage(const cv::Mat& image, const std::vector<std::vector<cv::Point>>& contours, int maxWidth,
-                        int maxHeight);
+  void trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Point>& contour, int maxWidth, int maxHeight);
 
   void display_view();
+  void pantilt();
 
 public Q_SLOTS:
   void slotUpdateImg();
