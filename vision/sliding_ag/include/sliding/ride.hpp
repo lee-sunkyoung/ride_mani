@@ -19,8 +19,9 @@ public:
   ~RIDE();
   LR max_distin(cv::Mat color_img);
   LR min_distin(cv::Mat color_img);
+  LR ry30_distin(cv::Mat color_img);
   XY riding(cv::Mat yello, cv::Mat white, cv::Mat red);
-  XY judge(LR L, LR R);
+  XY judge(LR L, LR R, LR Y);
   XY wheel(int LRPM, int RRPM);
   char grad(LR gradient);
 };
@@ -28,25 +29,26 @@ public:
 
 XY RIDE::riding(cv::Mat yello, cv::Mat white, cv::Mat red){
 
-LR L,R,STOP;
+LR L,R,Y,STOP;
 
 L=max_distin(yello);
 R=min_distin(white);
+Y=ry30_distin(yello);
 STOP=max_distin(red);  //왼쪽오른쪽 123 좌표 저장하기
 
 XY sol;
-
-sol= judge(L,R);
+sol= judge(L,R,Y);
 
 return sol;
 }
 
-XY RIDE::judge(LR L, LR R){
+XY RIDE::judge(LR L, LR R, LR Y){
 
 XY result;
 
-if(R.p2.x==0&&L.p2.x>0){result=wheel(15,10);} //하양중간안잡히면 우회전
-else if(L.p2.x==0&&R.p2.x>0){result=wheel(10,15);} //노랑중간안잡히고 하양중간잡힘
+if(R.p2.x==0&&L.p2.x>0&&Y.p1.y==0){result=wheel(10,15);} //하양중간안잡히면 우회전
+else if(R.p2.x==0&&L.p2.x>0&&Y.p1.y>0){result=wheel(10,10);} //하양중간안잡히면 우회전
+else if(L.p2.x==0&&R.p2.x>240){result=wheel(15,10);} //노랑중간안잡히고 하양중간잡힘 turn left
 else {result=wheel(15,15);}//아니면 직진
 
 //곡선우선, 직선은 둘다 직선잡히면 직선임.
@@ -155,6 +157,27 @@ LR RIDE::min_distin(cv::Mat color_img){
     P.p1.x=minPoint1.x;
     P.p2.x=minPoint2.x;
     P.p3.x=minPoint3.x;
+
+    return P;
+    }
+
+
+LR RIDE::ry30_distin(cv::Mat color_img){
+     std::vector<cv::Point> Wpoints;
+      cv::findNonZero(color_img, Wpoints);
+      int targety1 = 240;
+      cv::Point minPoint1;
+  
+      for (std::vector<cv::Point>::const_iterator it = Wpoints.begin(); it != Wpoints.end(); ++it) {
+       const cv::Point& point = *it;
+        if (point.y == targety1) {
+            if (minPoint1.y == 0 || point.y < minPoint1.y) {
+                minPoint1 = point;
+            }
+        }
+      }
+    LR P;
+    P.p1.x=minPoint1.y;
 
     return P;
     }

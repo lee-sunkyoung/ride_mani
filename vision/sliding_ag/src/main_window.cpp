@@ -66,32 +66,36 @@ void MainWindow::slotUpdateImg()
   ui.origin->setPixmap(QPixmap::fromImage(origin_image));
   QImage origin_2_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);  // 세번째 UI
   ui.origin_2->setPixmap(QPixmap::fromImage(origin_2_image));
+  QImage bird_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
+  ui.bird->setPixmap(QPixmap::fromImage(bird_image));
+  QImage bird_2_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
+  ui.bird_2->setPixmap(QPixmap::fromImage(bird_2_image));
 
   /*****************************************************************************
    ** 버드아이뷰 이미지(bird_eye)
    *****************************************************************************/
-  cv::Mat bird_eye = Bird_eye_view(img);
-  QImage bird_image(bird_eye.data, bird_eye.cols, bird_eye.rows, bird_eye.step, QImage::Format_RGB888);
-  ui.bird->setPixmap(QPixmap::fromImage(bird_image));
-  QImage bird_2_image(bird_eye.data, bird_eye.cols, bird_eye.rows, bird_eye.step, QImage::Format_RGB888);
-  ui.bird_2->setPixmap(QPixmap::fromImage(bird_2_image));
 
-  cv::Mat cloneImage = bird_eye.clone();
 
   /*****************************************************************************
    ** 이진화 찾는 이미지
    *****************************************************************************/
-  Find_Line_Binary_img(cloneImage);
+  Find_Sign_Binary_img(img);
   Find_Sign_Binary_img(img);
 
   /*****************************************************************************
    ** 라인 인식
    *****************************************************************************/
   //흰색 선 이미지(white_img) :
-  int white_HSV_value[6] = { 0, 0, 100, 255, 60, 255 };  // low h, low s, low v, high h, high s, high v
+  int white_HSV_value[6] = { 89, 0, 75, 179, 43, 158};  // low h, low s, low v, high h, high s, high v
   cv::Mat white_img = Binary(img, white_HSV_value);      // 흰색 선 이진화
   int white_ROI_value[8] = { 241, 270, 480, 270, 480, 0, 241, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
-                                                                    // 꼭지점, 좌측 상단 꼭지점
+                                                                     // 꼭지점, 좌측 상단 꼭지점
+                                                                     
+  cv::Mat mask = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(3,3),cv::Point(1,1)); 
+  cv::erode(white_img,white_img,mask,cv::Point(-1,-1),1);
+  cv::dilate(white_img,white_img,mask,cv::Point(-1,-1),3);
+
+
   // cv::Mat wroi = region_of_interest(white_img, white_ROI_value);  // 흰색 관심 영역 설정
   // cv::Mat mw = morphological_transformation(wroi);
   cv::Mat white_edge = canny_edge(white_img);  // 흰색 Canny 엣지 검출 적용
@@ -100,10 +104,10 @@ void MainWindow::slotUpdateImg()
   ui.white->setPixmap(QPixmap::fromImage(white_QImage));
 
   //노란색 선 이미지(yellow_img) :
-  int yellow_HSV_value[6] = { 0, 80, 0, 255, 255, 255 };  // low h, low s, low v, high h, high s, high v
+  int yellow_HSV_value[6] = { 81, 119, 67, 120, 191, 145};  // low h, low s, low v, high h, high s, high v
   cv::Mat yellow_img = Binary(img, yellow_HSV_value);     // 노란색 선 이진화
   int yellow_ROI_value[8] = { 0, 270, 240, 270, 240, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
-                                                                 // 꼭지점, 좌측 상단 꼭지점
+                                                                 // 꼭점, 좌측 상단 꼭지점
   // cv::Mat yroi = region_of_interest(yellow_img, yellow_ROI_value);  // 노란색 관심 영역 설정
   // cv::Mat my = morphological_transformation(yroi);
   cv::Mat yellow_edge = canny_edge(yellow_img);  // 노란색 Canny 엣지 검출 적용
@@ -152,6 +156,15 @@ void MainWindow::slotUpdateImg()
   qnode.lrpm = ans.x;
   qnode.rrpm = ans.y;
 
+  //pantilt
+  pantilt();
+  // if (pantilt_flag == 1)
+  // {
+  //   qnode.lrpm=10; 
+  //   qnode.rrpm=10;
+  // }
+  
+
   /*****************************************************************************
    ** 초기화
    *****************************************************************************/
@@ -162,7 +175,6 @@ void MainWindow::slotUpdateImg()
   }
   qnode.isreceived = false;
 }
-
 /*****************************************************************************
  ** 라인 & 표지판 TEST
  *****************************************************************************/
@@ -170,7 +182,6 @@ void MainWindow::slotUpdateImg()
 void MainWindow::Find_Line_Binary_img(cv::Mat& cloneImage)
 {
   // 선 이진화
-
   cv::Mat LF_Image = Binary(cloneImage, value_line);
 
   // 이진 이미지를 표시
@@ -198,7 +209,6 @@ void MainWindow::Find_Line_Binary_img(cv::Mat& cloneImage)
 void MainWindow::Find_Sign_Binary_img(cv::Mat& img)
 {
   // 표지판 이진화
-
   cv::Mat SF_Image = Binary(img, value_sign);
 
   // 이진 이미지를 표시
@@ -335,21 +345,22 @@ cv::Mat MainWindow::mergeImages(const cv::Mat& whiteImage, const cv::Mat& yellow
 void MainWindow::drawline(cv::Mat& Image)
 {
   cv::Point p1(0, HALF_HEIGHT);
-  cv::Point p2(IMAGE_WIDTH, HALF_HEIGHT);  // 480 270(135)
+  cv::Point p2(IMAGE_WIDTH, HALF_HEIGHT);
   cv::line(Image, p1, p2, cv::Scalar(255, 0, 0), 2);
 
   cv::Point p3(0, HALF_HEIGHT + 50);
-  cv::Point p4(IMAGE_WIDTH, HALF_HEIGHT + 50);  // 480 185
+  cv::Point p4(IMAGE_WIDTH, HALF_HEIGHT + 50);
   cv::line(Image, p3, p4, cv::Scalar(255, 0, 0), 2);
 
   cv::Point p5(0, HALF_HEIGHT - 50);
-  cv::Point p6(IMAGE_WIDTH, HALF_HEIGHT - 50);  // 480 85
+  cv::Point p6(IMAGE_WIDTH, HALF_HEIGHT - 50);
   cv::line(Image, p5, p6, cv::Scalar(255, 0, 0), 2);
 }
 
 /*****************************************************************************
  ** 표지판 인식 :
  *****************************************************************************/
+// 외각선 따는 함수
 cv::Mat MainWindow::cutImages(cv::Mat& cloneImage)
 {
   // 입력 이미지에 큰 크기의 사각형 커널을 사용하여 closing 모폴로지 연산을 적용
@@ -358,14 +369,34 @@ cv::Mat MainWindow::cutImages(cv::Mat& cloneImage)
   int iterations = 3;  // 반복 횟수를 늘림
   cv::morphologyEx(cloneImage, closed, cv::MORPH_CLOSE, kernel, cv::Point(-1, -1), iterations);
 
-  // 외곽이 강조된 이미지를 반환
+  // 외곽이 강조된 이미지를 반환dddss
   return closed;
 }
+
+//라벨링 하는 함수
+void MainWindow::labeling(cv::Mat& image, cv::Mat& image2)
+{
+  cv::Mat result, stats, centroids;
+  int num = cv::connectedComponentsWithStats(image, result, stats, centroids, 8, CV_32S);
+
+  for (int i = 1; i < num; i++)
+  {
+    int left = static_cast<int>(stats.at<int>(i, cv::CC_STAT_LEFT));
+    int top = static_cast<int>(stats.at<int>(i, cv::CC_STAT_TOP));
+    int width = static_cast<int>(stats.at<int>(i, cv::CC_STAT_WIDTH));
+    int height = static_cast<int>(stats.at<int>(i, cv::CC_STAT_HEIGHT));
+
+    cv::rectangle(image2, cv::Rect(left, top, width, height), cv::Scalar(0, 255, 255), 4);
+  }
+}
+
 // 외각선 그리는 함수
 void MainWindow::findAndDrawContours(cv::Mat& closed, cv::Mat& image)
 {
+  
   if (closed.empty() || image.empty())
   {
+    // qDebug() << "Error: Input image or mask is empty!";
     return;
   }
 
@@ -375,8 +406,10 @@ void MainWindow::findAndDrawContours(cv::Mat& closed, cv::Mat& image)
 
   if (contours.empty())
   {
+    // qDebug() << "No contours found!";
     return;
   }
+
   // 외각선을 크기에 따라 내림차순으로 정렬
   std::sort(contours.begin(), contours.end(), [](const std::vector<cv::Point>& a, const std::vector<cv::Point>& b) {
     return cv::contourArea(a) > cv::contourArea(b);
@@ -388,7 +421,7 @@ void MainWindow::findAndDrawContours(cv::Mat& closed, cv::Mat& image)
 
   QImage sign_QImage(contoursImage.data, contoursImage.cols, contoursImage.rows, contoursImage.step,
                      QImage::Format_RGB888);
-  ui.draw->setPixmap(QPixmap::fromImage(sign_QImage.rgbSwapped()));
+  ui.draw->setPixmap(QPixmap::fromImage(sign_QImage));
 
   trimAndSaveImage(image, contours[0], 480, 270);  // 가장 큰 외각선만 전달
 }
@@ -399,11 +432,13 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
 {
   if (image.empty())
   {
+    // qDebug() << "Error: Input image is empty!";
     return;
   }
 
   if (contour.empty())  // 인자 이름을 contour로 수정했습니다.
   {
+    // qDebug() << "No contour provided for trimming!";
     return;
   }
 
@@ -428,6 +463,7 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
 
   if (w <= 0 || h <= 0)
   {
+    // qDebug() << "Invalid dimensions for trimming!";
     return;
   }
 
@@ -435,8 +471,15 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
   cv::Mat img_trim = image(cv::Rect(x, y, w, h));
 
   // 자른 이미지의 크기가 120x120 보다 클 경우만 이미지 조정
-  if (w > 130 && h > 130)
+  if (w > 100 && h > 100)
   {
+    //pantilt
+    // pantilt_flag = 1;
+    // qDebug() << "???????????????";
+    // qnode.pointval.x = x+w/2;
+    // qnode.pointval.y = y+h/3;
+    //qnode.pantilt_pub.publish(qnode.pointval);
+
     // 원본 비율 유지하면서 최대로 키우기
     double aspectRatio = static_cast<double>(w) / h;
     int targetWidth, targetHeight;
@@ -458,11 +501,16 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
 
     QImage signre_QImage(resized_img.data, resized_img.cols, resized_img.rows, resized_img.step, QImage::Format_RGB888);
     ui.result_2->setPixmap(QPixmap::fromImage(signre_QImage));
+
+    //pantilt end moment
+    // if(x == 240 && y == 135)
+    // {
+    //   pantilt_flag = 0;
+    //   qnode.boolval.data = true;
+    // }
+
   }
-  else
-  {
-    qDebug() << "Image dimensions are not larger than 120x120!";
-  }
+  
 }
 /*****************************************************************************
  ** 자율주행 :
@@ -472,17 +520,23 @@ void MainWindow::display_view()
   ui.Mani_Auto->display(mani_auto_flag);
   ui.Go_Stop->display(go_stop_flag);
 
-  ui.m_1->display(angle1);
+  ui.m_1->display(pantilt_flag);
   ui.m_2->display(angle2);
   ui.m_3->display(angle3);
   ui.m_4->display(angle4);
+
 }
 
 void MainWindow::pantilt()
 {
-  if (mani_auto_flag == 0)
+  //(오토레이스)차선 인식 시작 -> 계속 고정해야 하는 각도값을 전달
+  if ((mani_auto_flag == 0||mani_auto_flag ==1) && pantilt_flag == 0)  //차선
   {
     qnode.boolval.data = true;
+  }
+  else if(pantilt_flag == 1) //차선, 표지판 둘다 값 없음
+  {
+    qnode.boolval.data = false;
   }
   qnode.init_pub.publish(qnode.boolval);
 }
@@ -494,7 +548,6 @@ void MainWindow::Mani()
 void MainWindow::Auto()
 {
   mani_auto_flag = 0;
-  pantilt();
 }
 
 void MainWindow::autorace_go()

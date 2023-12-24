@@ -53,6 +53,8 @@ public:
   int go_stop_flag = 0;
   int init_v = 0;
 
+  int pantilt_flag = 0;
+
   int mani_auto_flag = 1;
   int angle1 = 0;  //초기값 입력
   int angle2 = 0;

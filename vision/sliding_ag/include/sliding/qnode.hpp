@@ -28,7 +28,7 @@
 #include <sensor_msgs/Image.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Bool.h>
-//#include <tutorial_msgs/mydmxel.h>
+#include <geometry_msgs/Point.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 
@@ -59,6 +59,7 @@ public:
   //ros::Subscriber subJoy;
   
   std_msgs::Bool boolval;
+  geometry_msgs::Point pointval;
   geometry_msgs::Twist twist;
 
   ros::Publisher init_pub;

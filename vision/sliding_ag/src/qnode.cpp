@@ -57,8 +57,8 @@ bool QNode::init()
   //subJoy = n.subscribe("/hello", 100, &QNode::callbackJoy, this);
 
   // autorace->로봇 제어 명령을 보낼 퍼블리셔 생성
-  init_pub = n.advertise<geometry_msgs::Twist>("init_pub", 1);
-  pantilt_pub = n.advertise<geometry_msgs::Twist>("target", 1);
+  init_pub = n.advertise<std_msgs::Bool>("init_pub", 10);
+  pantilt_pub = n.advertise<geometry_msgs::Point>("target", 10);
   cmd_vel_pub = n.advertise<geometry_msgs::Twist>("/cmd_vel", 10);
 
   wheel_pub = n.advertise<tutorial_msgs::mydmxel>("/bye",1000);
