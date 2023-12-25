@@ -19,7 +19,7 @@ public:
   ~RIDE();
   LR max_distin(cv::Mat color_img);
   LR min_distin(cv::Mat color_img);
-  LR ry30_distin(cv::Mat color_img);
+  LR ry360_distin(cv::Mat color_img);
   XY riding(cv::Mat yello, cv::Mat white, cv::Mat red);
   XY judge(LR L, LR R, LR Y);
   XY wheel(int LRPM, int RRPM);
@@ -33,7 +33,7 @@ LR L,R,Y,STOP;
 
 L=max_distin(yello);
 R=min_distin(white);
-Y=ry30_distin(yello);
+Y=ry360_distin(yello);
 STOP=max_distin(red);  //왼쪽오른쪽 123 좌표 저장하기
 
 XY sol;
@@ -44,11 +44,20 @@ return sol;
 
 XY RIDE::judge(LR L, LR R, LR Y){
 
-XY result;
+XY result; 
+if(R.p1.x==0&&R.p2.x>240&&L.p1.x>0){result=wheel(16,12);} //right zicgak turn left &&go straight
+else if(R.p2.x==0&&L.p1.x>0&&L.p2.x==0&&Y.p1.y>0){result=wheel(10,15);}
 
-if(R.p2.x==0&&L.p2.x>0&&Y.p1.y==0){result=wheel(10,15);} //하양중간안잡히면 우회전
-else if(R.p2.x==0&&L.p2.x>0&&Y.p1.y>0){result=wheel(10,10);} //하양중간안잡히면 우회전
-else if(L.p2.x==0&&R.p2.x>240){result=wheel(15,10);} //노랑중간안잡히고 하양중간잡힘 turn left
+else if(R.p2.x==0&&L.p3.x>0&&Y.p1.y>0&&Y.p2.y>185){result=wheel(7,16);}
+
+else if(R.p2.x==0&&L.p1.x>0&&L.p3.x>0&&Y.p1.y>0){result=wheel(12,16);}
+else if(R.p2.x==0&&L.p1.x>0&&L.p2.x>0&&Y.p1.y>0){result=wheel(14,14);}
+else if(R.p2.x==0&&L.p2.x>0&&Y.p1.y>0){result=wheel(12,15);}
+
+else if(L.p3.x>0&&Y.p1.y>0){result=wheel(12,17);}
+            
+else if(L.p2.x==0&&R.p2.x>240){result=wheel(15,10);}   
+else if(R.p2.x==0&&L.p2.x>0){result=wheel(10,15);}
 else {result=wheel(15,15);}//아니면 직진
 
 //곡선우선, 직선은 둘다 직선잡히면 직선임.
@@ -162,22 +171,30 @@ LR RIDE::min_distin(cv::Mat color_img){
     }
 
 
-LR RIDE::ry30_distin(cv::Mat color_img){
+LR RIDE::ry360_distin(cv::Mat color_img){
      std::vector<cv::Point> Wpoints;
       cv::findNonZero(color_img, Wpoints);
-      int targety1 = 240;
-      cv::Point minPoint1;
+      int targetx1 = 360;
+      int targetx2 = 240;
+      cv::Point maxPoint1;
+      cv::Point maxPoint2;
   
       for (std::vector<cv::Point>::const_iterator it = Wpoints.begin(); it != Wpoints.end(); ++it) {
        const cv::Point& point = *it;
-        if (point.y == targety1) {
-            if (minPoint1.y == 0 || point.y < minPoint1.y) {
-                minPoint1 = point;
+        if (point.x == targetx1) {
+            if (maxPoint1.y == 0 || point.y > maxPoint1.y) {
+                maxPoint1 = point;
+            }
+        }
+        if (point.x == targetx2) {
+            if (maxPoint2.y == 0 || point.y > maxPoint2.y) {
+                maxPoint2 = point;
             }
         }
       }
     LR P;
-    P.p1.x=minPoint1.y;
+    P.p1.y=maxPoint1.y;
+    P.p2.y=maxPoint2.y;
 
     return P;
     }

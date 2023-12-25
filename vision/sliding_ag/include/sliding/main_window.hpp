@@ -47,22 +47,23 @@ public:
   int HALF_WIDTH = 240;
   int HALF_HEIGHT = 135;
 
-  int value_sign[6];  // sign hsv
-  int value_line[6];  // line hsv
+  int value_hsv[6];  // hsv
 
   int go_stop_flag = 0;
   int init_v = 0;
 
   int pantilt_flag = 0;
-
+  int sign_end_flag = 0;
+  int cnt = 0;
+  int cnt_flag =0;
+  
   int mani_auto_flag = 1;
   int angle1 = 0;  //초기값 입력
   int angle2 = 0;
   int angle3 = 0;
   int angle4 = 0;
 
-  void Find_Line_Binary_img(cv::Mat& cloneImage);
-  void Find_Sign_Binary_img(cv::Mat& cloneImage);
+  void Find_Binary_img(cv::Mat& cloneImage);
 
   cv::Mat Bird_eye_view(cv::Mat image);
 

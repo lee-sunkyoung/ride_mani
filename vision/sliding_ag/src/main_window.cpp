@@ -64,12 +64,15 @@ void MainWindow::slotUpdateImg()
 
   QImage origin_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);  // 첫번째 UI
   ui.origin->setPixmap(QPixmap::fromImage(origin_image));
-  QImage origin_2_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);  // 세번째 UI
+
+  QImage origin_2_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888); 
   ui.origin_2->setPixmap(QPixmap::fromImage(origin_2_image));
-  QImage bird_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
-  ui.bird->setPixmap(QPixmap::fromImage(bird_image));
-  QImage bird_2_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
-  ui.bird_2->setPixmap(QPixmap::fromImage(bird_2_image));
+
+  QImage origin_3_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
+  ui.origin_3->setPixmap(QPixmap::fromImage(origin_3_image));
+  
+  QImage origin_4_image(img.data, img.cols, img.rows, img.step, QImage::Format_RGB888);
+  ui.origin_4->setPixmap(QPixmap::fromImage(origin_4_image));
 
   /*****************************************************************************
    ** 버드아이뷰 이미지(bird_eye)
@@ -79,8 +82,7 @@ void MainWindow::slotUpdateImg()
   /*****************************************************************************
    ** 이진화 찾는 이미지
    *****************************************************************************/
-  Find_Sign_Binary_img(img);
-  Find_Sign_Binary_img(img);
+  Find_Binary_img(img);
 
   /*****************************************************************************
    ** 라인 인식
@@ -94,8 +96,6 @@ void MainWindow::slotUpdateImg()
   cv::Mat mask = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(3,3),cv::Point(1,1)); 
   cv::erode(white_img,white_img,mask,cv::Point(-1,-1),1);
   cv::dilate(white_img,white_img,mask,cv::Point(-1,-1),3);
-
-
   // cv::Mat wroi = region_of_interest(white_img, white_ROI_value);  // 흰색 관심 영역 설정
   // cv::Mat mw = morphological_transformation(wroi);
   cv::Mat white_edge = canny_edge(white_img);  // 흰색 Canny 엣지 검출 적용
@@ -108,6 +108,8 @@ void MainWindow::slotUpdateImg()
   cv::Mat yellow_img = Binary(img, yellow_HSV_value);     // 노란색 선 이진화
   int yellow_ROI_value[8] = { 0, 270, 240, 270, 240, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
                                                                  // 꼭점, 좌측 상단 꼭지점
+  //cv::erode(yellow_img,yellow_img,mask,cv::Point(-1,-1),1);
+  cv::dilate(yellow_img,yellow_img,mask,cv::Point(-1,-1),2);
   // cv::Mat yroi = region_of_interest(yellow_img, yellow_ROI_value);  // 노란색 관심 영역 설정
   // cv::Mat my = morphological_transformation(yroi);
   cv::Mat yellow_edge = canny_edge(yellow_img);  // 노란색 Canny 엣지 검출 적용
@@ -136,35 +138,40 @@ void MainWindow::slotUpdateImg()
   ui.line->setPixmap(QPixmap::fromImage(binary_2_QImage));
 
   //초록색 선 이미지(red_img) :
-  int green_HSV_value[6] = { 0, 60, 0, 53, 255, 255 };  // low h, low s, low v, high h, high s, high v
+  int green_HSV_value[6] = { 0, 100, 0, 50, 255, 255 };  // low h, low s, low v, high h, high s, high v
   cv::Mat green_img = Binary(img, green_HSV_value);     // 초록색 선 이진화
   int green_ROI_value[8] = { 200, 135, 260, 135, 260, 70, 200, 70 };
   // cv::Mat mg = morphological_transformation(green_img);
   // cv::Mat groi = region_of_interest(green_img, green_ROI_value);
   cv::Mat green = cutImages(green_img);  // 초록색 관심 영역 설정
-  QImage green_QImage(green.data, green.cols, green.rows, green_img.step, QImage::Format_Grayscale8);
+  QImage green_QImage(green.data, green.cols, green.rows, green.step, QImage::Format_Grayscale8);
   ui.green->setPixmap(QPixmap::fromImage(green_QImage));
   QImage green_2_QImage(green.data, green.cols, green.rows, green.step, QImage::Format_Grayscale8);
   ui.sign->setPixmap(QPixmap::fromImage(green_2_QImage));
+
+  //sign
   findAndDrawContours(green, img);
 
+  //ride
   XY ans;
-
   RIDE ride;
   ans = ride.riding(yellow_img, white_img, red_img);
-  display_view();
   qnode.lrpm = ans.x;
   qnode.rrpm = ans.y;
 
   //pantilt
-  pantilt();
-  // if (pantilt_flag == 1)
-  // {
-  //   qnode.lrpm=10; 
-  //   qnode.rrpm=10;
-  // }
+ 
+  if (pantilt_flag == 1)
+  {
+    qnode.lrpm=10; 
+    qnode.rrpm=10;
+  } 
   
-
+  display_view();
+  if(cnt_flag ==1)
+  {
+    cnt++;
+  }
   /*****************************************************************************
    ** 초기화
    *****************************************************************************/
@@ -175,61 +182,35 @@ void MainWindow::slotUpdateImg()
   }
   qnode.isreceived = false;
 }
+
 /*****************************************************************************
  ** 라인 & 표지판 TEST
  *****************************************************************************/
-// 라인 이진화 찾는 함수
-void MainWindow::Find_Line_Binary_img(cv::Mat& cloneImage)
-{
-  // 선 이진화
-  cv::Mat LF_Image = Binary(cloneImage, value_line);
-
-  // 이진 이미지를 표시
-  QImage line_binaryQImage(LF_Image.data, LF_Image.cols, LF_Image.rows, LF_Image.step, QImage::Format_Grayscale8);
-  ui.l_test->setPixmap(QPixmap::fromImage(line_binaryQImage));
-
-  // 슬라이더
-  value_line[0] = ui.horizontalSlider_1->value();  // low h
-  value_line[1] = ui.horizontalSlider_2->value();  // low s
-  value_line[2] = ui.horizontalSlider_3->value();  // low v
-  value_line[3] = ui.horizontalSlider_4->value();  // high h
-  value_line[4] = ui.horizontalSlider_5->value();  // high s
-  value_line[5] = ui.horizontalSlider_6->value();  // high v
-
-  // 슬라이더 값
-  ui.l_1->display(value_line[0]);
-  ui.l_2->display(value_line[1]);
-  ui.l_3->display(value_line[2]);
-  ui.l_4->display(value_line[3]);
-  ui.l_5->display(value_line[4]);
-  ui.l_6->display(value_line[5]);
-}
-
-// 표지판 이진화 찾는 함수
-void MainWindow::Find_Sign_Binary_img(cv::Mat& img)
+// 이진화 찾는 함수
+void MainWindow::Find_Binary_img(cv::Mat& img)
 {
   // 표지판 이진화
-  cv::Mat SF_Image = Binary(img, value_sign);
+  cv::Mat F_Image = Binary(img, value_hsv);
 
   // 이진 이미지를 표시
-  QImage sign_binaryQImage(SF_Image.data, SF_Image.cols, SF_Image.rows, SF_Image.step, QImage::Format_Grayscale8);
-  ui.s_test->setPixmap(QPixmap::fromImage(sign_binaryQImage));
+  QImage sign_binaryQImage(F_Image.data, F_Image.cols, F_Image.rows, F_Image.step, QImage::Format_Grayscale8);
+  ui.test->setPixmap(QPixmap::fromImage(sign_binaryQImage));
 
   // 슬라이더
-  value_sign[0] = ui.horizontalSlider_7->value();   // low h
-  value_sign[1] = ui.horizontalSlider_8->value();   // low s
-  value_sign[2] = ui.horizontalSlider_9->value();   // low v
-  value_sign[3] = ui.horizontalSlider_10->value();  // high h
-  value_sign[4] = ui.horizontalSlider_11->value();  // high s
-  value_sign[5] = ui.horizontalSlider_12->value();  // high v
+  value_hsv[0] = ui.horizontalSlider_7->value();   // low h
+  value_hsv[1] = ui.horizontalSlider_8->value();   // low s
+  value_hsv[2] = ui.horizontalSlider_9->value();   // low v
+  value_hsv[3] = ui.horizontalSlider_10->value();  // high h
+  value_hsv[4] = ui.horizontalSlider_11->value();  // high s
+  value_hsv[5] = ui.horizontalSlider_12->value();  // high v
 
   // 슬라이더 값
-  ui.s_1->display(value_sign[0]);
-  ui.s_2->display(value_sign[1]);
-  ui.s_3->display(value_sign[2]);
-  ui.s_4->display(value_sign[3]);
-  ui.s_5->display(value_sign[4]);
-  ui.s_6->display(value_sign[5]);
+  ui.s_1->display(value_hsv[0]);
+  ui.s_2->display(value_hsv[1]);
+  ui.s_3->display(value_hsv[2]);
+  ui.s_4->display(value_hsv[3]);
+  ui.s_5->display(value_hsv[4]);
+  ui.s_6->display(value_hsv[5]);
 }
 
 /*****************************************************************************
@@ -346,15 +327,28 @@ void MainWindow::drawline(cv::Mat& Image)
 {
   cv::Point p1(0, HALF_HEIGHT);
   cv::Point p2(IMAGE_WIDTH, HALF_HEIGHT);
-  cv::line(Image, p1, p2, cv::Scalar(255, 0, 0), 2);
+  cv::line(Image, p1, p2, cv::Scalar(255, 0, 0), 1);
 
-  cv::Point p3(0, HALF_HEIGHT + 50);
-  cv::Point p4(IMAGE_WIDTH, HALF_HEIGHT + 50);
-  cv::line(Image, p3, p4, cv::Scalar(255, 0, 0), 2);
+  cv::Point p3(0, HALF_HEIGHT + 60);
+  cv::Point p4(IMAGE_WIDTH, HALF_HEIGHT + 60);
+  cv::line(Image, p3, p4, cv::Scalar(255, 0, 0), 1);
 
-  cv::Point p5(0, HALF_HEIGHT - 50);
-  cv::Point p6(IMAGE_WIDTH, HALF_HEIGHT - 50);
-  cv::line(Image, p5, p6, cv::Scalar(255, 0, 0), 2);
+  cv::Point p5(0, HALF_HEIGHT - 60);
+  cv::Point p6(IMAGE_WIDTH, HALF_HEIGHT - 60);
+  cv::line(Image, p5, p6, cv::Scalar(255, 0, 0), 1);
+
+  cv::Point p7(HALF_WIDTH, 0);
+  cv::Point p8(HALF_WIDTH, IMAGE_HEIGHT);
+  cv::line(Image, p7, p8, cv::Scalar(255, 0, 0), 1);
+
+    cv::Point p9(HALF_WIDTH+120, 0);
+  cv::Point p10(HALF_WIDTH+120, IMAGE_HEIGHT);
+  cv::line(Image, p9, p10, cv::Scalar(255, 0, 0), 1);
+
+    cv::Point p11(HALF_WIDTH-120, 0);
+  cv::Point p12(HALF_WIDTH-120, IMAGE_HEIGHT);
+  cv::line(Image, p11, p12, cv::Scalar(255, 0, 0), 1);
+
 }
 
 /*****************************************************************************
@@ -436,7 +430,7 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
     return;
   }
 
-  if (contour.empty())  // 인자 이름을 contour로 수정했습니다.
+  if (contour.empty()) 
   {
     // qDebug() << "No contour provided for trimming!";
     return;
@@ -471,14 +465,15 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
   cv::Mat img_trim = image(cv::Rect(x, y, w, h));
 
   // 자른 이미지의 크기가 120x120 보다 클 경우만 이미지 조정
-  if (w > 100 && h > 100)
+  if ((w > 50 && h > 50) && sign_end_flag == 0)
   {
+    cnt_flag =1;
     //pantilt
-    // pantilt_flag = 1;
-    // qDebug() << "???????????????";
-    // qnode.pointval.x = x+w/2;
-    // qnode.pointval.y = y+h/3;
-    //qnode.pantilt_pub.publish(qnode.pointval);
+    pantilt_flag = 1;
+    qDebug() << "???????????????";
+    qnode.pointval.x = x+w/2;
+    qnode.pointval.y = y+h/2;
+    qnode.pantilt_pub.publish(qnode.pointval);
 
     // 원본 비율 유지하면서 최대로 키우기
     double aspectRatio = static_cast<double>(w) / h;
@@ -501,13 +496,19 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
 
     QImage signre_QImage(resized_img.data, resized_img.cols, resized_img.rows, resized_img.step, QImage::Format_RGB888);
     ui.result_2->setPixmap(QPixmap::fromImage(signre_QImage));
-
+    QImage signre_2_QImage(resized_img.data, resized_img.cols, resized_img.rows, resized_img.step, QImage::Format_RGB888);
+    ui.sign_result->setPixmap(QPixmap::fromImage(signre_2_QImage));
+    
     //pantilt end moment
-    // if(x == 240 && y == 135)
-    // {
-    //   pantilt_flag = 0;
-    //   qnode.boolval.data = true;
-    // }
+    if(((x >= 235 && x<=245) || (y >= 133 && y<= 137))|| cnt >=200)
+    {
+      
+      pantilt_flag = 0;
+      sign_end_flag = 1;
+      qnode.boolval.data = true;
+      qnode.init_pub.publish(qnode.boolval);
+      return;
+    }
 
   }
   
@@ -521,7 +522,7 @@ void MainWindow::display_view()
   ui.Go_Stop->display(go_stop_flag);
 
   ui.m_1->display(pantilt_flag);
-  ui.m_2->display(angle2);
+  ui.m_2->display(cnt);
   ui.m_3->display(angle3);
   ui.m_4->display(angle4);
 
@@ -544,10 +545,12 @@ void MainWindow::pantilt()
 void MainWindow::Mani()
 {
   mani_auto_flag = 1;
+   pantilt();
 }
 void MainWindow::Auto()
 {
   mani_auto_flag = 0;
+   pantilt();
 }
 
 void MainWindow::autorace_go()
