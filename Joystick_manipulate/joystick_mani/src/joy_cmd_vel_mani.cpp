@@ -7,8 +7,6 @@
 #include <tutorial_msgs/mydmxel.h>
 
 
-#define ANGULAR1_MAX 10.0  //각속도1의 최댓값 10.0 ~ -10.0
-#define ANGULAR2_MAX 10.0  //각속도2의 최댓값 10.0 ~ -10.0
 #define SENSITIVITY 0.1    //조이스틱 감도 조절
 
 
@@ -39,7 +37,7 @@ moter calculate_angle(float x, float y, float z,int l1, int l2){
   ey=z;
 
   //세타 3 구하기
-  cos3= ((ex*ex)+(ey*ey))/((l1*l1)+(l2*l2)+(2*l1*l2));  //ex ey인가
+  cos3= ((ex*ex)+(ey*ey))/((l1*l1)+(l2*l2)+(2*l1*l2));
   sin3= sqrt(1-(cos3*cos3));
 
   theta3= atan2(sin3,cos3);
@@ -53,7 +51,7 @@ moter calculate_angle(float x, float y, float z,int l1, int l2){
   dmxel.mo1=val2dy(theta1)+252;
   dmxel.mo2=val2dy(theta2);
   dmxel.mo3=val2dy(theta3);
-  dmxel.mo4=val2dy(theta2+theta3-1.5708);
+  dmxel.mo4=val2dy(-theta2-theta3-1.5708);
   dmxel.theta=theta2+theta3;
   return dmxel;
 }
@@ -63,7 +61,7 @@ class Joy_cmd_vel_mani
 public:
   Joy_cmd_vel_mani();
   void operate();
-  float MAXtoMIN(float angular, float max);
+  float MAXtoMIN(float angular, float max, float min);
 
 private:
   void joyCallback(const sensor_msgs::Joy::ConstPtr& joy);
@@ -136,42 +134,41 @@ if(check==true){
   crt_arm_z+= SENSITIVITY * arm_z;
   crt_arm_x+= SENSITIVITY * arm_x;
   crt_arm_y+= SENSITIVITY * arm_y;
-  crt_grip=((grip_open-1)/2)*230+((1-grip_close)/2)*230; //조이에서 받는값이 좀 달라서 이 그리퍼움직이는 둘은
+  crt_grip=((grip_open-1)/2)*230+((1-grip_close)/2)*230; //조이에서 받는값이 좀 달라서 이 그리퍼움직이는 둘은 이런식으로 코드를 짬
 
   //최대값 제한
-  crt_arm_z=MAXtoMIN(crt_arm_z,50);
-  crt_arm_x=MAXtoMIN(crt_arm_x,50);
-  crt_arm_y=MAXtoMIN(crt_arm_y,50);
-  crt_hand =MAXtoMIN(crt_hand,180); 
-  crt_grip =MAXtoMIN(crt_grip,230);
+  crt_arm_z=MAXtoMIN(crt_arm_z,40,40);
+  crt_arm_x=MAXtoMIN(crt_arm_x,40,40);
+  crt_arm_y=MAXtoMIN(crt_arm_y,40,40);
+  crt_hand =MAXtoMIN(crt_hand,360,0);//손목 
+  crt_grip =MAXtoMIN(crt_grip,480,0);//손가락
 }
   moter dmx;
   dmx=calculate_angle(crt_arm_x,crt_arm_y,crt_arm_z,l1,l2);
 
-  //crt_grip=crt_grip*10;
-  //crt_hand=crt_hand*10;
-
-  dmx.mo5=crt_grip+230;
-  dmx.mo4=crt_hand*11.377+2048;
+  dmx.mo5=crt_grip+230; //손가락
 
 if(r4no==1||crt_r4no==1){
   crt_r4no==1;
   crt_right_angle=0;
 }
+
 if(right_angle==1||crt_right_angle==1){
     crt_right_angle=1;
     crt_r4no=0;
-    dmx.mo4=val2dy(dmx.theta-1.5708);
+    dmx.mo4=crt_hand*11.377+2048;
   }
+
 if(init_grip==1||crt_init_grip==1){
     crt_init_grip=1;
     dmx.mo1=2300;
     dmx.mo2=4000;
     dmx.mo3=3680;
   }
+
 if(init_ride==1||crt_init_ride==1){
       crt_init_ride=1;
-      crt_init_grip=0; 
+      crt_init_grip=0;
       crt_arm_x=0;
       crt_arm_y=3;
       crt_arm_z=10;
@@ -180,10 +177,6 @@ if(init_ride==1||crt_init_ride==1){
 if(dmx.mo2<=2000){dmx.mo2=2000;}
 if(dmx.mo3<=300){dmx.mo2=300;}
 if(dmx.mo4<=200){dmx.mo2=200;}
-
-if(dmx.mo2>=3900){dmx.mo2=3900;}
-if(dmx.mo3>=3900){dmx.mo2=3900;}
-if(dmx.mo4>=3900){dmx.mo2=3900;}
 
 msg.motor1=dmx.mo1;
 msg.motor2=dmx.mo2;
@@ -236,15 +229,15 @@ void Joy_cmd_vel_mani::joyCallback(const sensor_msgs::Joy::ConstPtr& joy)
 }
 
 // 해당 각속도의 최대 최소 범위 설정함.
-float Joy_cmd_vel_mani::MAXtoMIN(float angular, float max)
+float Joy_cmd_vel_mani::MAXtoMIN(float angular, float max,float min)
 {
   if (angular > max)
   {
     angular = max;
   }
-  else if (angular < -max)
+  else if (angular < -min)
   {
-    angular = -max;
+    angular = -min;
   }
   return angular;
 }
