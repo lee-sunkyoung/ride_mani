@@ -5,7 +5,8 @@
 #include <sensor_msgs/Joy.h>
 #include <cmath>
 #include <tutorial_msgs/mydmxel.h>
-
+#include <iostream>
+#include <sstream>
 
 #define SENSITIVITY 0.1    //조이스틱 감도 조절
 
@@ -20,8 +21,8 @@ typedef struct moter_angle{
 }moter;
 
 int val2dy(double theta){
-  int a = theta*(180/3.14)*11.377;
-  int dmx=2048+a;
+  int a = theta*2048/3.1415;
+  int dmx=2048-a;
 
   return dmx;
 }
@@ -33,8 +34,8 @@ moter calculate_angle(float x, float y, float z,int l1, int l2){
   double cos3, sin3;
   double ex,ey;
   
-  ex = sqrt((x*x)+(y*y));
-  ey=z;
+  ex =z;
+  ey=sqrt((x*x)+(y*y));
 
   //세타 3 구하기
   cos3= ((ex*ex)+(ey*ey))/((l1*l1)+(l2*l2)+(2*l1*l2));
@@ -48,11 +49,15 @@ moter calculate_angle(float x, float y, float z,int l1, int l2){
 
   theta1 = atan2(x,y);
 
+  std::cout<<theta1*(180/3.14)<<"/"<<(theta2)*(180/3.14)<<"/"<<theta3*(180/3.14)<<std::endl;/////////////////////////////////////
+
   dmxel.mo1=val2dy(theta1)+252;
-  dmxel.mo2=val2dy(theta2);
-  dmxel.mo3=val2dy(theta3);
-  dmxel.mo4=val2dy(-theta2-theta3-1.5708);
+  dmxel.mo2=val2dy(theta2)+512; 
+  dmxel.mo3=val2dy(theta3); 
+  dmxel.mo4=val2dy(1.5708-theta2-theta3)-512;
   dmxel.theta=theta2+theta3;
+  
+  
   return dmxel;
 }
 
@@ -98,9 +103,6 @@ private:
   int l1=23,l2=18;
  
 //모터변수
-
-
-
   ros::Publisher vel_pub_; 
   ros::Subscriber joy_sub_;  // joy 토픽에서 조이스틱 메시지를 받아 joyCallback 콜백 함수를 호출.
 };
@@ -117,6 +119,9 @@ void Joy_cmd_vel_mani::operate()
 
   //최대길이 체크
   float checkbuf= sqrt((crt_arm_x*crt_arm_x)+(crt_arm_y*crt_arm_y)+(crt_arm_z*crt_arm_z));
+  
+  std::cout<<checkbuf<<std::endl;/////////////////////////////////////
+  
   bool check;
   if(checkbuf<40){
     check=true;
@@ -125,58 +130,66 @@ void Joy_cmd_vel_mani::operate()
 
  if(arm_x!=0||arm_y!=0||arm_z!=0||hand!=0||grip_open!=0||grip_close!=0){
   crt_init_ride=0;
-  } //고정좌표값 삭제후 이동가능하게 하기
+} //고정좌표값 삭제후 이동가능하게 하기
 
-if(check==true){
- 
+if(check==true){ 
+  
   //현재값 저장
-  crt_hand += SENSITIVITY * hand;
+
+  crt_hand += hand;
   crt_arm_z+= SENSITIVITY * arm_z;
   crt_arm_x+= SENSITIVITY * arm_x;
   crt_arm_y+= SENSITIVITY * arm_y;
-  crt_grip=((grip_open-1)/2)*230+((1-grip_close)/2)*230; //조이에서 받는값이 좀 달라서 이 그리퍼움직이는 둘은 이런식으로 코드를 짬
+
+  std::cout<<crt_arm_x<<"/"<<crt_arm_y<<"/"<<crt_arm_z<<std::endl;/////////////////////////////////////
+
+  
+  crt_grip =((grip_open-1)/2)*230+((1-grip_close)/2)*230; //조이에서 받는값이 좀 달라서 이 그리퍼움직이는 둘은 이런식으로 코드를 짬
 
   //최대값 제한
   crt_arm_z=MAXtoMIN(crt_arm_z,40,40);
   crt_arm_x=MAXtoMIN(crt_arm_x,40,40);
   crt_arm_y=MAXtoMIN(crt_arm_y,40,40);
-  crt_hand =MAXtoMIN(crt_hand,360,0);//손목 
-  crt_grip =MAXtoMIN(crt_grip,480,0);//손가락
+  crt_hand =MAXtoMIN(crt_hand,180,180);//손목 
+  crt_grip =MAXtoMIN(crt_grip,230,230);//손가락
+    
 }
   moter dmx;
   dmx=calculate_angle(crt_arm_x,crt_arm_y,crt_arm_z,l1,l2);
 
-  dmx.mo5=crt_grip+230; //손가락
+  dmx.mo5=crt_grip+230; //finger
+
 
 if(r4no==1||crt_r4no==1){
-  crt_r4no==1;
-  crt_right_angle=0;
+  crt_r4no=1;
+  crt_right_angle=0;  
+  dmx.mo4=crt_hand*11.377+2048;
+
 }
 
 if(right_angle==1||crt_right_angle==1){
     crt_right_angle=1;
     crt_r4no=0;
-    dmx.mo4=crt_hand*11.377+2048;
   }
 
 if(init_grip==1||crt_init_grip==1){
     crt_init_grip=1;
     dmx.mo1=2300;
     dmx.mo2=4000;
-    dmx.mo3=3680;
+    dmx.mo3=500;
   }
 
 if(init_ride==1||crt_init_ride==1){
       crt_init_ride=1;
       crt_init_grip=0;
-      crt_arm_x=0;
-      crt_arm_y=3;
-      crt_arm_z=10;
+      crt_arm_x=0.1;
+      crt_arm_y=21;
+      crt_arm_z=18;
   }
 
-if(dmx.mo2<=2000){dmx.mo2=2000;}
-if(dmx.mo3<=300){dmx.mo2=300;}
-if(dmx.mo4<=200){dmx.mo2=200;}
+//if(dmx.mo2<=2000){dmx.mo2=2000;}
+// if(dmx.mo3<=300){dmx.mo2=300;}
+// if(dmx.mo4<=200){dmx.mo2=200;}
 
 msg.motor1=dmx.mo1;
 msg.motor2=dmx.mo2;

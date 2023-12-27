@@ -21,7 +21,7 @@ public:
   LR min_distin(cv::Mat color_img);
   LR ry360_distin(cv::Mat color_img);
   XY riding(cv::Mat yello, cv::Mat white, cv::Mat red);
-  XY judge(LR L, LR R, LR Y);
+  XY judge(LR L, LR R, LR Y, LR STOP);
   XY wheel(int LRPM, int RRPM);
   char grad(LR gradient);
 };
@@ -34,33 +34,38 @@ LR L,R,Y,STOP;
 L=max_distin(yello);
 R=min_distin(white);
 Y=ry360_distin(yello);
-STOP=max_distin(red);  //왼쪽오른쪽 123 좌표 저장하기
+STOP=ry360_distin(red);  //왼쪽오른쪽 123 좌표 저장하기
 
 XY sol;
-sol= judge(L,R,Y);
+sol= judge(L,R,Y,STOP);
 
 return sol;
 }
 
-XY RIDE::judge(LR L, LR R, LR Y){
+XY RIDE::judge(LR L, LR R, LR Y,LR STOP){
 
 XY result; 
-if(R.p1.x==0&&R.p2.x>240&&L.p1.x>0){result=wheel(16,12);} //right zicgak turn left &&go straight
-else if(R.p2.x==0&&L.p1.x>0&&L.p2.x==0&&Y.p1.y>0){result=wheel(10,15);}
+static int red_flag=0;
+if(STOP.p1.y>150&& STOP.p2.y>150||red_flag==1){red_flag=1; result=wheel(10,10);}
+else if(R.p1.x==0&&R.p2.x>240&&L.p1.x>0){result=wheel(12,16);} //right zicgak turn left &&go straight
+else if(R.p2.x==0&&L.p1.x>0&&L.p2.x==0&&Y.p1.y>0){result=wheel(15,10);}
+else if(R.p2.x==0&&R.p1.x==0&&L.p3.x>0&&Y.p1.y>0&&Y.p2.y>185){result=wheel(16,7);}
 
-else if(R.p2.x==0&&L.p3.x>0&&Y.p1.y>0&&Y.p2.y>185){result=wheel(7,16);}
 
-else if(R.p2.x==0&&L.p1.x>0&&L.p3.x>0&&Y.p1.y>0){result=wheel(12,16);}
+else if(R.p2.x==0&&L.p1.x>0&&L.p3.x>0&&Y.p1.y>0&&Y.p1.y<65&&Y.p2.x<180){result=wheel(14,8);}
+else if(R.p2.x==0&&L.p1.x>0&&L.p3.x>0&&Y.p1.y>0&&Y.p1.y<65){result=wheel(16,12);}
+
+else if(R.p2.x==0&&L.p1.x>0&&L.p3.x>0&&Y.p1.y>0){result=wheel(16,10);}
 else if(R.p2.x==0&&L.p1.x>0&&L.p2.x>0&&Y.p1.y>0){result=wheel(14,14);}
-else if(R.p2.x==0&&L.p2.x>0&&Y.p1.y>0){result=wheel(12,15);}
 
-else if(L.p3.x>0&&Y.p1.y>0){result=wheel(12,17);}
-            
-else if(L.p2.x==0&&R.p2.x>240){result=wheel(15,10);}   
-else if(R.p2.x==0&&L.p2.x>0){result=wheel(10,15);}
+else if(R.p2.x==0&&L.p2.x>0&&Y.p1.y>0){result=wheel(16,12);}
+
+else if(L.p3.x>0&&Y.p1.y>0){result=wheel(17,12);}
+else if(L.p2.x==0&&R.p2.x>240){result=wheel(12,15);}
+else if(R.p2.x==0&&L.p2.x>0){result=wheel(15,10);}
 else {result=wheel(15,15);}//아니면 직진
 
-//곡선우선, 직선은 둘다 직선잡히면 직선임.
+//곡선우선, 직선은 둘다 직선잡히면 직선임.+
 return result;
 }
 

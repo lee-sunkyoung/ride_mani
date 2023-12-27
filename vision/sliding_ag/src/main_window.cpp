@@ -40,8 +40,6 @@ MainWindow::MainWindow(int argc, char** argv, QWidget* parent) : QMainWindow(par
 
   QObject::connect(ui.manipulation, SIGNAL(clicked()), this, SLOT(Mani()));
   QObject::connect(ui.autorace, SIGNAL(clicked()), this, SLOT(Auto()));
-  QObject::connect(ui.GO_button, SIGNAL(clicked()), this, SLOT(autorace_go()));
-  QObject::connect(ui.STOP_button, SIGNAL(clicked()), this, SLOT(autorace_stop()));
 }
 
 MainWindow::~MainWindow()
@@ -51,8 +49,6 @@ MainWindow::~MainWindow()
 /*****************************************************************************
 ** Functions
 *****************************************************************************/
-// delete로 고치기
-
 // 이미지 처리 및 UI 업데이트를 수행
 void MainWindow::slotUpdateImg()
 {
@@ -104,7 +100,7 @@ void MainWindow::slotUpdateImg()
   ui.white->setPixmap(QPixmap::fromImage(white_QImage));
 
   //노란색 선 이미지(yellow_img) :
-  int yellow_HSV_value[6] = { 81, 119, 67, 120, 191, 145};  // low h, low s, low v, high h, high s, high v
+  int yellow_HSV_value[6] = { 41, 100, 57, 95, 223, 145};  // low h, low s, low v, high h, high s, high v
   cv::Mat yellow_img = Binary(img, yellow_HSV_value);     // 노란색 선 이진화
   int yellow_ROI_value[8] = { 0, 270, 240, 270, 240, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단
                                                                  // 꼭점, 좌측 상단 꼭지점
@@ -119,12 +115,13 @@ void MainWindow::slotUpdateImg()
   ui.yellow->setPixmap(QPixmap::fromImage(yellow_QImage));
 
   //빨간색 선 이미지(red_img) :
-  int red_HSV_value[6] = { 0, 80, 0, 10, 255, 255 };   // low h, low s, low v, high h, high s, high v
+  int red_HSV_value[6] = { 106, 107, 30, 255, 255, 255 };   // low h, low s, low v, high h, high s, high v
   cv::Mat red_img = Binary(img, red_HSV_value);  // 빨간색 선 이진
   int red_ROI_value[8] = { 0, 100, 480, 100, 480, 0, 0, 0 };  // 좌측 하단 꼭지점, 우측 하단 꼭지점, 우측 상단 꼭지점,
                                                               // 좌측 상단 꼭지점
   // cv::Mat rroi = region_of_interest(red_img, red_ROI_value);  // 빨간색 관심 영역 설정
   // cv::Mat mr = morphological_transformation(rroi);
+  cv::dilate(red_img,red_img,mask,cv::Point(-1,-1),1);
   cv::Mat red_edge = canny_edge(red_img);  // 빨간색 Canny 엣지 검출 적용
   drawline(red_edge);
   QImage red_QImage(red_edge.data, red_edge.cols, red_edge.rows, red_edge.step, QImage::Format_Grayscale8);
@@ -155,23 +152,35 @@ void MainWindow::slotUpdateImg()
   //ride
   XY ans;
   RIDE ride;
-  ans = ride.riding(yellow_img, white_img, red_img);
-  qnode.lrpm = ans.x;
-  qnode.rrpm = ans.y;
-
   //pantilt
- 
   if (pantilt_flag == 1)
   {
+    cnt++;
     qnode.lrpm=10; 
     qnode.rrpm=10;
+    pantilt_cnt=1;
   } 
+  else if(pantilt_flag ==0 || sign_end_flag == 1){
+    ans = ride.riding(yellow_img, white_img, red_img);
+    qnode.lrpm = ans.x;
+    qnode.rrpm = ans.y;
+  }
+  if(pantilt_cnt==1&&pantilt_count<150){
+    if(pantilt_flag==0){
+      pantilt_count++;
+      qnode.lrpm=10; 
+      qnode.rrpm=10;
+      }
+  }
+  if(pantilt_start == 0)
+  {
+    qnode.boolval.data = true;
+    qnode.init_pub.publish(qnode.boolval);
+    pantilt_start =1;
+  }
   
   display_view();
-  if(cnt_flag ==1)
-  {
-    cnt++;
-  }
+
   /*****************************************************************************
    ** 초기화
    *****************************************************************************/
@@ -450,8 +459,8 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
     y_max = std::max(y_max, y_value);
   }
 
-  int x = x_min;
-  int y = y_min;
+  x = x_min;
+  y = y_min;
   int w = x_max - x_min;
   int h = y_max - y_min;
 
@@ -465,9 +474,8 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
   cv::Mat img_trim = image(cv::Rect(x, y, w, h));
 
   // 자른 이미지의 크기가 120x120 보다 클 경우만 이미지 조정
-  if ((w > 50 && h > 50) && sign_end_flag == 0)
+  if((w > 50 && h > 50)&& sign_end_flag == 0)
   {
-    cnt_flag =1;
     //pantilt
     pantilt_flag = 1;
     qDebug() << "???????????????";
@@ -500,31 +508,41 @@ void MainWindow::trimAndSaveImage(const cv::Mat& image, const std::vector<cv::Po
     ui.sign_result->setPixmap(QPixmap::fromImage(signre_2_QImage));
     
     //pantilt end moment
-    if(((x >= 235 && x<=245) || (y >= 133 && y<= 137))|| cnt >=200)
+    if(cnt >=200)
     {
-      
-      pantilt_flag = 0;
       sign_end_flag = 1;
+      pantilt_flag = 0;
       qnode.boolval.data = true;
       qnode.init_pub.publish(qnode.boolval);
       return;
     }
-
   }
-  
 }
+
 /*****************************************************************************
  ** 자율주행 :
  *****************************************************************************/
 void MainWindow::display_view()
 {
-  ui.Mani_Auto->display(mani_auto_flag);
-  ui.Go_Stop->display(go_stop_flag);
-
-  ui.m_1->display(pantilt_flag);
-  ui.m_2->display(cnt);
+  ui.m_1->display(angle1);
+  ui.m_2->display(angle2);
   ui.m_3->display(angle3);
   ui.m_4->display(angle4);
+  ui.m_5->display(angle5);
+  
+  ui.lrpm->display(qnode.lrpm);
+  ui.rrpm->display(qnode.rrpm);
+
+  ui.lrpm_2->display(qnode.lrpm);
+  ui.rrpm_2->display(qnode.rrpm);
+
+  ui.f_1->display(mani_auto_flag);
+  ui.f_2->display(pantilt_flag);
+  ui.f_3->display(cnt);
+  ui.f_4->display(qnode.boolval.data);
+  ui.f_5->display(qnode.pointval.x);
+  ui.f_6->display(qnode.pointval.y);
+
 
 }
 
@@ -534,6 +552,17 @@ void MainWindow::pantilt()
   if ((mani_auto_flag == 0||mani_auto_flag ==1) && pantilt_flag == 0)  //차선
   {
     qnode.boolval.data = true;
+    pantilt_flag = 0;
+    sign_end_flag = 0;
+    pantilt_start =0;
+    cnt = 0;
+    x =0;
+    y =0;
+    angle1 = 0;  //초기값 입력
+    angle2 = 0;
+    angle3 = 0;
+    angle4 = 0;
+    angle5 = 0;
   }
   else if(pantilt_flag == 1) //차선, 표지판 둘다 값 없음
   {
@@ -551,16 +580,6 @@ void MainWindow::Auto()
 {
   mani_auto_flag = 0;
    pantilt();
-}
-
-void MainWindow::autorace_go()
-{
-  go_stop_flag = 1;
-  init_v = 0;
-}
-void MainWindow::autorace_stop()
-{
-  go_stop_flag = 0;
 }
 
 }  // namespace sliding

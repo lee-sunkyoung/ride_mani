@@ -49,19 +49,21 @@ public:
 
   int value_hsv[6];  // hsv
 
-  int go_stop_flag = 0;
-  int init_v = 0;
-
   int pantilt_flag = 0;
+  int pantilt_cnt =0;
+  int pantilt_count=0;
   int sign_end_flag = 0;
+  int pantilt_start =0;
   int cnt = 0;
-  int cnt_flag =0;
+  int x;
+  int y;
   
   int mani_auto_flag = 1;
   int angle1 = 0;  //초기값 입력
   int angle2 = 0;
   int angle3 = 0;
   int angle4 = 0;
+  int angle5 = 0;
 
   void Find_Binary_img(cv::Mat& cloneImage);
 
@@ -86,8 +88,6 @@ public Q_SLOTS:
   void slotUpdateImg();
   void Mani();
   void Auto();
-  void autorace_go();
-  void autorace_stop();
 
 private:
   Ui::MainWindowDesign ui;
