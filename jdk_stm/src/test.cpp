@@ -26,8 +26,8 @@ void Test::myCallBack(const tutorial_msgs::mydmxelConstPtr& msg)
   stmPacketGenerator.ID_5 = msg->motor4;
   stmPacketGenerator.ID_6 = msg->motor5;
   
-  stmPacketGenerator.left_wheel = msg->L_wheel;
-  stmPacketGenerator.right_wheel = msg->R_wheel;
+  // stmPacketGenerator.left_wheel = msg->L_wheel;
+  // stmPacketGenerator.right_wheel = msg->R_wheel;
 }
 
 void Test::myCallBack_autorace(const tutorial_msgs::mydmxelConstPtr& msg)

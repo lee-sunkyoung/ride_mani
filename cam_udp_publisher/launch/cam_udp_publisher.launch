@@ -1,0 +1,5 @@
+<launch>
+    <include file="$(find usb_cam)/launch/usb_cam.launch" />
+    <node name="cam_udp_publisher" pkg="cam_udp_publisher" type="cam_udp_publisher" output="screen" />
+</launch>
+  
