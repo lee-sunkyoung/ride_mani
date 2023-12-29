@@ -138,7 +138,7 @@ if(check==true){
 
   crt_hand += hand;
   crt_arm_z+= SENSITIVITY * arm_z;
-  crt_arm_x+= SENSITIVITY * arm_x;
+  crt_arm_x-= SENSITIVITY * arm_x;
   crt_arm_y+= SENSITIVITY * arm_y;
 
   std::cout<<crt_arm_x<<"/"<<crt_arm_y<<"/"<<crt_arm_z<<std::endl;/////////////////////////////////////
@@ -150,7 +150,7 @@ if(check==true){
   crt_arm_z=MAXtoMIN(crt_arm_z,40,40);
   crt_arm_x=MAXtoMIN(crt_arm_x,40,40);
   crt_arm_y=MAXtoMIN(crt_arm_y,40,40);
-  crt_hand =MAXtoMIN(crt_hand,180,180);//손목 
+  crt_hand =MAXtoMIN(crt_hand,180,180);//손목 `
   crt_grip =MAXtoMIN(crt_grip,230,230);//손가락
     
 }
