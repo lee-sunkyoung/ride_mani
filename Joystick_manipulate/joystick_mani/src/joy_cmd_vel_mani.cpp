@@ -160,10 +160,11 @@ if(check==true){
   dmx.mo5=crt_grip+230; //finger
 
 
-if(r4no==1||crt_r4no==1){
+if(r4no==1||crt_r4no==1||crt_r4no==2){
   crt_r4no=1;
+  if(crt_r4no==1){crt_hand=(1.5708-dmx.theta)*180/3.1415; crt_r4no=2;}
   crt_right_angle=0;  
-  dmx.mo4=crt_hand*11.377+2048;
+  dmx.mo4=crt_hand*11.377+2048-512;
 
 }
 
